@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE module SYSTEM "module.dtd" >
+<module>
+    <name>magnolia-content-indexer</name>
+    <displayName>Magnolia content-indexer</displayName>
+    <description>The content indexer module makes can be used to populate search indexes</description>
+    <class>com.merkle.oss.magnolia.content.indexer.ContentIndexerModule</class>
+    <version>${project.version}</version>
+
+    <components>
+        <id>main</id>
+        <configurer>
+            <class>com.merkle.oss.magnolia.content.indexer.configuration.ContentIndexerGuiceComponentConfigurer</class>
+        </configurer>
+        <component>
+            <type>com.merkle.oss.magnolia.content.indexer.IndexerTrigger</type>
+            <implementation>com.merkle.oss.magnolia.content.indexer.IndexerTrigger</implementation>
+            <scope>singleton</scope>
+        </component>
+    </components>
+
+    <dependencies>
+        <dependency>
+            <name>core</name>
+        </dependency>
+    </dependencies>
+</module>
