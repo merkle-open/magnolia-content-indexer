@@ -60,34 +60,37 @@ public class GuiceComponentConfigurer extends AbstractGuiceComponentConfigurer {
 ```java
 import com.merkle.oss.magnolia.content.indexer.Indexer;
 import com.merkle.oss.magnolia.content.indexer.annotation.IndexerFactory;
+
 import info.magnolia.dam.jcr.DamConstants;
 import info.magnolia.jcr.util.NodeTypes;
 import info.magnolia.repository.RepositoryConstants;
 
+import java.util.Collection;
+
 import javax.jcr.Node;
 
 @IndexerFactory(
-        id =  "SomeApp:indexers/" + SomeIndexer.NAME,
+        id = "SomeApp:indexers/" + SomeIndexer.NAME,
         name = SomeIndexer.NAME,
         configs = {
-                @IndexerFactory.Config(type = "page", workspace = RepositoryConstants.WEBSITE, nodeTypes = {NodeTypes.Page.NAME}),
-                @IndexerFactory.Config(type = "asset", workspace = DamConstants.WORKSPACE, nodeTypes = {"mgnl:asset"})
+                @IndexerFactory.Config(type = "page", workspace = RepositoryConstants.WEBSITE, nodeTypes = { NodeTypes.Page.NAME }),
+                @IndexerFactory.Config(type = "asset", workspace = DamConstants.WORKSPACE, nodeTypes = { "mgnl:asset" })
         }
 )
 public class SomeIndexer implements Indexer {
     public static final String NAME = "some";
 
     @Override
-    public void index(final Node node, final String type) throws Exception {
+    public void index(final Collection<Node> nodes, final String type) throws Exception {
         /*
          * TODO add to index
-         *  Gets triggered on node changes according to configs 
-         *  make sure to add path to index to be able to remove them (path param in remove interface)
+         *  Gets triggered on node changes according to configs
+         *  make sure to add node identifier to index to be able to remove it (see remove interface)
          */
     }
 
     @Override
-    public void remove(final String path, final String type) throws Exception {
+    public void remove(final Collection<Indexer.IndexNode> nodes, final String type) throws Exception {
         /*
          * TODO remove from index
          *  Gets triggered on node changes according to configs

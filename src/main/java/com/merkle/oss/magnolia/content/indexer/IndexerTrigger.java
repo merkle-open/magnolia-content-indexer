@@ -1,10 +1,12 @@
 package com.merkle.oss.magnolia.content.indexer;
 
 import info.magnolia.context.SystemContext;
+import info.magnolia.jcr.util.NodeUtil;
 import info.magnolia.objectfactory.ComponentProvider;
 
 import java.lang.invoke.MethodHandles;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Objects;
 import java.util.Spliterator;
 import java.util.Spliterators;
@@ -20,12 +22,14 @@ import org.apache.jackrabbit.commons.predicate.Predicate;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.google.common.collect.Iterables;
 import com.machinezoo.noexception.Exceptions;
 import com.merkle.oss.magnolia.content.indexer.registry.IndexerDefinition;
 import com.merkle.oss.magnolia.content.indexer.registry.IndexerDefinitionRegistry;
 
 public class IndexerTrigger {
 	private static final Logger LOG = LoggerFactory.getLogger(MethodHandles.lookup().lookupClass());
+	private static final java.util.function.Predicate<Node> NOT_ROOT_NODE = node -> !Objects.equals(Exceptions.wrap().get(node::getPath), "/");
     private final SystemContext systemContext;
     private final IndexerDefinitionRegistry indexerDefinitionRegistry;
     private final ComponentProvider componentProvider;
@@ -44,25 +48,26 @@ public class IndexerTrigger {
 	public void index(final String indexerName, final String type, final String path, final boolean includeChildren) {
 		final IndexerDefinition definition = indexerDefinitionRegistry.getProvider(indexerName).get();
 		final LoggingIndexerWrapper indexer = new LoggingIndexerWrapper(componentProvider.getComponent(definition.getClazz()));
-		LOG.info("Indexing {} under {}...", definition.getName(), path);
-		streamNodes(definition, type, path, includeChildren).forEach(node ->
-				indexer.index(node, type)
-		);
-		LOG.info("Indexing {} under {} completed", definition.getName(), path);
+		LOG.info("Indexing {} under {} (includeChildren:{})...", definition.getName(), path, includeChildren);
+		partition(getNodes(definition, type, path, includeChildren), definition.getBatchSize()).forEach(nodes -> indexer.index(nodes, type));
+		LOG.info("Indexing {} under {} (includeChildren:{}) completed", definition.getName(), path, includeChildren);
 	}
 
 	public void remove(final String indexerName, final String type, final String path) {
 		final IndexerDefinition definition = indexerDefinitionRegistry.getProvider(indexerName).get();
 		final LoggingIndexerWrapper indexer = new LoggingIndexerWrapper(componentProvider.getComponent(definition.getClazz()));
 		LOG.info("Removing {} under {}...", definition.getName(), path);
-		streamConfigs(definition, type).map(config -> getValidatePath(config, path)).forEach(p ->
-			indexer.remove(p, type)
-		);
+		partition(getNodes(definition, type, path, true).map(node ->
+				new Indexer.IndexNode(
+						NodeUtil.getNodeIdentifierIfPossible(node),
+						NodeUtil.getNodePathIfPossible(node)
+				)
+		), definition.getBatchSize()).forEach(nodes -> indexer.remove(nodes, type));
 		LOG.info("Removing {} under {} completed", definition.getName(), path);
 	}
 
-	private Stream<Node> streamNodes(final IndexerDefinition definition, final String type, final String path, final boolean includeChildren) {
-		return streamConfigs(definition, type).flatMap(config -> streamNodes(config, path, includeChildren));
+	private Stream<Node> getNodes(final IndexerDefinition definition, final String type, final String path, final boolean includeChildren) {
+		return streamConfigs(definition, type).flatMap(config -> streamNodes(config, path, includeChildren)).filter(NOT_ROOT_NODE);
 	}
 
 	private Stream<Config> streamConfigs(final IndexerDefinition definition, final String type) {
@@ -88,7 +93,13 @@ public class IndexerTrigger {
 		final Provider<Iterator<Node>> iterator = () -> new FilteringNodeIterator(Exceptions.wrap().get(node::getNodes), predicate);
 		return Stream.concat(
 				Stream.of(node),
-				StreamSupport.stream(Spliterators.spliteratorUnknownSize(iterator.get(), Spliterator.ORDERED),false)
+				StreamSupport
+						.stream(Spliterators.spliteratorUnknownSize(iterator.get(), Spliterator.ORDERED),false)
+						.flatMap(n -> streamChildren(n, predicate))
 		);
+	}
+
+	private <I> Stream<List<I>> partition(final Stream<I> source, final int batchSize) {
+		return StreamSupport.stream(Iterables.partition(source::iterator, batchSize).spliterator(), source.isParallel());
 	}
 }

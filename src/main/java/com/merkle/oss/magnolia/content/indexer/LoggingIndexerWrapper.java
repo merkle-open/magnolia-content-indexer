@@ -3,6 +3,8 @@ package com.merkle.oss.magnolia.content.indexer;
 import info.magnolia.jcr.util.NodeUtil;
 
 import java.lang.invoke.MethodHandles;
+import java.util.Collection;
+import java.util.List;
 
 import javax.jcr.Node;
 
@@ -17,22 +19,22 @@ public class LoggingIndexerWrapper implements Indexer {
         this.wrapped = wrapped;
     }
 
-    public void index(final Node node, final String type) {
-        final String path = NodeUtil.getPathIfPossible(node);
+    public void index(final Collection<Node> nodes, final String type) {
+        final List<String> nodeIdentifiers = nodes.stream().map(NodeUtil::getNodeIdentifierIfPossible).toList();
         try {
-            LOG.debug("Indexing " + path + " of type " + type + "...");
-            wrapped.index(node, type);
+            LOG.debug("Indexing " + nodeIdentifiers + " of type " + type + "...");
+            wrapped.index(nodes, type);
         } catch (Exception e) {
-            LOG.error("Failed to index " + path + "!", e);
+            LOG.error("Failed to index " + nodeIdentifiers + "!", e);
         }
     }
 
-    public void remove(final String path, final String type) {
+    public void remove(final Collection<IndexNode> nodes, final String type) {
         try {
-            LOG.debug("Removing " + path + "of type " + type + "...");
-            wrapped.remove(path, type);
+            LOG.debug("Removing " + nodes + "of type " + type + "...");
+            wrapped.remove(nodes, type);
         } catch (Exception e) {
-            LOG.error("Failed to remove " + path + "!", e);
+            LOG.error("Failed to remove " + nodes + "!", e);
         }
     }
 }

@@ -10,6 +10,7 @@ import java.lang.annotation.Target;
 public @interface IndexerFactory {
     String id();
     String name();
+    int batchSize() default Integer.MAX_VALUE;
     Config[] configs();
 
     @interface Config {
