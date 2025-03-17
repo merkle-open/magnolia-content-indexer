@@ -11,15 +11,18 @@ import com.merkle.oss.magnolia.content.indexer.Indexer;
 public class IndexerDefinition implements NamedDefinition {
 	private final String name;
 	private final Class<? extends Indexer> clazz;
+    private final int batchSize;
     private final Set<Config> configs;
 
 	public IndexerDefinition(
 			final String name,
 			final Class<? extends Indexer> clazz,
+			final int batchSize,
 			final Set<Config> configs
 	) {
 		this.name = name;
 		this.clazz = clazz;
+        this.batchSize = batchSize;
         this.configs = configs;
     }
 
@@ -32,6 +35,10 @@ public class IndexerDefinition implements NamedDefinition {
 		return clazz;
 	}
 
+	public int getBatchSize() {
+		return batchSize;
+	}
+
 	public Set<Config> getConfigs() {
 		return configs;
 	}
@@ -42,12 +49,12 @@ public class IndexerDefinition implements NamedDefinition {
 			return false;
 		}
 		IndexerDefinition that = (IndexerDefinition) o;
-		return Objects.equals(name, that.name) && Objects.equals(clazz, that.clazz) && Objects.equals(configs, that.configs);
+		return batchSize == that.batchSize && Objects.equals(name, that.name) && Objects.equals(clazz, that.clazz) && Objects.equals(configs, that.configs);
 	}
 
 	@Override
 	public int hashCode() {
-		return Objects.hash(name, clazz, configs);
+		return Objects.hash(name, clazz, batchSize, configs);
 	}
 
 	@Override
@@ -55,6 +62,7 @@ public class IndexerDefinition implements NamedDefinition {
 		return "IndexerDefinition{" +
 				"name='" + name + '\'' +
 				", clazz=" + clazz +
+				", batchSize=" + batchSize +
 				", configs=" + configs +
 				'}';
 	}

@@ -43,6 +43,7 @@ public class IndexerDefinitionProvider extends AbstractDynamicDefinitionProvider
         return new IndexerDefinition(
                 annotation.name(),
                 factoryClass,
+                annotation.batchSize(),
                 Arrays.stream(annotation.configs()).map(this::create).collect(Collectors.toSet())
         );
     }

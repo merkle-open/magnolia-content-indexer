@@ -45,12 +45,12 @@ public class DataListenerRegistrar {
     private void register(final IndexerDefinition definition) {
         final Indexer indexer = componentProvider.getComponent(definition.getClazz());
         definition.getConfigs().forEach(config ->
-            Exceptions.wrap().run(() -> register(indexer, config))
+            Exceptions.wrap().run(() -> register(indexer, definition, config))
         );
     }
 
-    private void register(final Indexer indexer, final Config config) throws RepositoryException {
-        final DataListener eventListener = new DataListener(systemContext, indexer, config);
+    private void register(final Indexer indexer, final IndexerDefinition definition, final Config config) throws RepositoryException {
+        final DataListener eventListener = new DataListener(systemContext, indexer, definition, config);
         registrations.add(
                 WorkspaceEventListenerRegistration
                         .observe(config.workspace(), config.rootNodePath(), new FilteredEventListener(eventListener, FILTER))
