@@ -9,6 +9,8 @@ import java.util.List;
 import java.util.Set;
 import java.util.Spliterator;
 import java.util.Spliterators;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -49,8 +51,12 @@ public class DataListener implements EventListener {
 
     @Override
     public void onEvent(final EventIterator events) {
-        partition(getNodes(events, REMOVE_EVENT_PREDICATE), definition.getBatchSize()).forEach(this::remove);
-        partition(getNodes(events, REMOVE_EVENT_PREDICATE.negate()), definition.getBatchSize()).forEach(this::index);
+        final Set<Event> eventSet = StreamSupport
+                .stream(Spliterators.spliteratorUnknownSize((Iterator<Event>) events, Spliterator.ORDERED), false)
+                .collect(Collectors.toSet());
+
+        partition(getNodes(eventSet, REMOVE_EVENT_PREDICATE), definition.getBatchSize()).forEach(this::remove);
+        partition(getNodes(eventSet, REMOVE_EVENT_PREDICATE.negate()), definition.getBatchSize()).forEach(this::index);
     }
 
     private void index(final Collection<Indexer.IndexNode> indexNodes) {
@@ -59,6 +65,7 @@ public class DataListener implements EventListener {
             final Session session = systemContext.getJCRSession(config.workspace());
             final Set<Node> nodes = indexNodes.stream()
                     .map(indexNode -> Exceptions.wrap().get(() -> session.getNodeByIdentifier(indexNode.identifier())))
+                    .filter(node -> new AnyNodeTypesPredicate(config.nodeTypes()).evaluateTyped(node))
                     .collect(Collectors.toSet());
             indexer.index(nodes, config.type());
             session.logout();
@@ -76,17 +83,24 @@ public class DataListener implements EventListener {
         }
     }
 
-    private Stream<Indexer.IndexNode> getNodes(final EventIterator events, final Predicate<Event> filter) {
-        return StreamSupport
-                .stream(Spliterators.spliteratorUnknownSize((Iterator<Event>) events, Spliterator.ORDERED), false)
+    private Stream<Indexer.IndexNode> getNodes(final Set<Event> eventSet, final Predicate<Event> filter) {
+        return eventSet.stream()
                 .filter(filter)
                 .filter(event -> Exceptions.wrap().get(event::getIdentifier) != null)
+                .filter(event -> Exceptions.wrap().get(event::getPath) != null)
                 .map(event -> Exceptions.wrap().get(() ->
                         new Indexer.IndexNode(event.getIdentifier(), event.getPath())
-                ));
+                ))
+                .filter(distinctByKey(Indexer.IndexNode::identifier))
+                .distinct();
     }
 
     private <I> Stream<List<I>> partition(final Stream<I> source, final int batchSize) {
         return StreamSupport.stream(Iterables.partition(source::iterator, batchSize).spliterator(), source.isParallel());
+    }
+
+    public static <T> Predicate<T> distinctByKey(Function<? super T, ?> keyExtractor) {
+        final Set<Object> seen = ConcurrentHashMap.newKeySet();
+        return t -> seen.add(keyExtractor.apply(t));
     }
 }
