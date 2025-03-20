@@ -17,8 +17,6 @@ import javax.inject.Inject;
 import javax.inject.Provider;
 import javax.jcr.Node;
 
-import org.apache.jackrabbit.commons.iterator.FilteringNodeIterator;
-import org.apache.jackrabbit.commons.predicate.Predicate;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -67,7 +65,9 @@ public class IndexerTrigger {
 	}
 
 	private Stream<Node> getNodes(final IndexerDefinition definition, final String type, final String path, final boolean includeChildren) {
-		return streamConfigs(definition, type).flatMap(config -> streamNodes(config, path, includeChildren)).filter(NOT_ROOT_NODE);
+		return streamConfigs(definition, type).flatMap(config ->
+				streamNodes(config, path, includeChildren).filter(NOT_ROOT_NODE.and(new AnyNodeTypesPredicate(config.nodeTypes())::evaluateTyped))
+		);
 	}
 
 	private Stream<Config> streamConfigs(final IndexerDefinition definition, final String type) {
@@ -77,7 +77,7 @@ public class IndexerTrigger {
 	private Stream<Node> streamNodes(final Config config, final String path, final boolean includeChildren) {
 		final Node node = Exceptions.wrap().get(() -> systemContext.getJCRSession(config.workspace()).getNode(getValidatePath(config, path)));
 		if(includeChildren) {
-			return streamChildren(node, new AnyNodeTypesPredicate(config.nodeTypes()));
+			return streamChildren(node);
 		}
 		return Stream.of(node);
 	}
@@ -89,13 +89,13 @@ public class IndexerTrigger {
 		return path;
 	}
 
-	private Stream<Node> streamChildren(final Node node, final Predicate predicate) {
-		final Provider<Iterator<Node>> iterator = () -> new FilteringNodeIterator(Exceptions.wrap().get(node::getNodes), predicate);
+	private Stream<Node> streamChildren(final Node node) {
+		final Provider<Iterator<Node>> iterator = () -> Exceptions.wrap().get(node::getNodes);
 		return Stream.concat(
 				Stream.of(node),
 				StreamSupport
 						.stream(Spliterators.spliteratorUnknownSize(iterator.get(), Spliterator.ORDERED),false)
-						.flatMap(n -> streamChildren(n, predicate))
+						.flatMap(this::streamChildren)
 		);
 	}
 
