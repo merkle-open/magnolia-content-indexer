@@ -87,7 +87,7 @@ public class SomeIndexer implements Indexer {
          *  Gets triggered on node changes according to configs
          *  make sure to add node identifier to index to be able to remove it (see remove interface)
          * 
-         *  NOTE: there's no magnolia context!
+         *  NOTE: runs in system context not in web context!
          */
     }
 
@@ -96,8 +96,8 @@ public class SomeIndexer implements Indexer {
         /*
          * TODO remove from index
          *  Gets triggered on node changes according to configs
-         * 
-         *  NOTE: there's no magnolia context!
+         *
+         *  NOTE: runs in system context not in web context!
          */
     }
 }

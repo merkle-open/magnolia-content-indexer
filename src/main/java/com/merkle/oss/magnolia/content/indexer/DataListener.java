@@ -1,5 +1,6 @@
 package com.merkle.oss.magnolia.content.indexer;
 
+import info.magnolia.context.MgnlContext;
 import info.magnolia.context.SystemContext;
 
 import java.lang.invoke.MethodHandles;
@@ -54,9 +55,13 @@ public class DataListener implements EventListener {
         final Set<Event> eventSet = StreamSupport
                 .stream(Spliterators.spliteratorUnknownSize((Iterator<Event>) events, Spliterator.ORDERED), false)
                 .collect(Collectors.toSet());
-
-        partition(getNodes(eventSet, REMOVE_EVENT_PREDICATE), definition.getBatchSize()).forEach(this::remove);
-        partition(getNodes(eventSet, REMOVE_EVENT_PREDICATE.negate()), definition.getBatchSize()).forEach(this::index);
+        try {
+            MgnlContext.setInstance(systemContext);
+            partition(getNodes(eventSet, REMOVE_EVENT_PREDICATE), definition.getBatchSize()).forEach(this::remove);
+            partition(getNodes(eventSet, REMOVE_EVENT_PREDICATE.negate()), definition.getBatchSize()).forEach(this::index);
+        } finally {
+            systemContext.release();
+        }
     }
 
     private void index(final Collection<Indexer.IndexNode> indexNodes) {
@@ -68,7 +73,6 @@ public class DataListener implements EventListener {
                     .filter(node -> new AnyNodeTypesPredicate(config.nodeTypes()).evaluateTyped(node))
                     .collect(Collectors.toSet());
             indexer.index(nodes, config.type());
-            session.logout();
         } catch (Exception e) {
             LOG.error("Failed to index nodes " + indexNodes, e);
         }
