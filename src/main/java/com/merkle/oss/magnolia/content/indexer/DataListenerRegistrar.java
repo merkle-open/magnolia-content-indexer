@@ -55,7 +55,6 @@ public class DataListenerRegistrar {
                 WorkspaceEventListenerRegistration
                         .observe(config.workspace(), config.rootNodePath(), new FilteredEventListener(eventListener, FILTER))
                         .withDelay(config.delay().toMillis())
-                        .withNodeTypes(config.nodeTypes().isEmpty() ? null : config.nodeTypes().toArray(String[]::new))
                         .register()
         );
     }

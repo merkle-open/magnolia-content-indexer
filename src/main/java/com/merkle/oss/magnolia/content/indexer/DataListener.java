@@ -7,6 +7,8 @@ import java.lang.invoke.MethodHandles;
 import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.Spliterator;
 import java.util.Spliterators;
@@ -18,6 +20,7 @@ import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
 
 import javax.jcr.Node;
+import javax.jcr.RepositoryException;
 import javax.jcr.Session;
 import javax.jcr.observation.Event;
 import javax.jcr.observation.EventIterator;
@@ -27,12 +30,14 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.google.common.collect.Iterables;
+import com.google.common.collect.Sets;
 import com.machinezoo.noexception.Exceptions;
 import com.merkle.oss.magnolia.content.indexer.registry.IndexerDefinition;
 
 public class DataListener implements EventListener {
     private static final Logger LOG = LoggerFactory.getLogger(MethodHandles.lookup().lookupClass());
-    private static final Predicate<Event> REMOVE_EVENT_PREDICATE = event -> event.getType() == Event.NODE_REMOVED;
+    private static final Predicate<Event> REMOVE_NODE_EVENT_PREDICATE = event -> event.getType() == Event.NODE_REMOVED;
+    private static final Predicate<Event> ADD_NODE_EVENT_PREDICATE = event -> event.getType() == Event.NODE_ADDED;
     private final SystemContext systemContext;
     private final LoggingIndexerWrapper indexer;
     private final IndexerDefinition definition;
@@ -52,16 +57,35 @@ public class DataListener implements EventListener {
 
     @Override
     public void onEvent(final EventIterator events) {
-        final Set<Event> eventSet = StreamSupport
+        final Map<String, Set<Event>> eventSet = StreamSupport
                 .stream(Spliterators.spliteratorUnknownSize((Iterator<Event>) events, Spliterator.ORDERED), false)
-                .collect(Collectors.toSet());
+                .filter(event -> Exceptions.wrap().get(event::getIdentifier) != null)
+                .collect(Collectors.toMap(event -> Exceptions.wrap().get(event::getIdentifier), Set::of, Sets::union));
+        LOG.debug("handling events: " + eventSet);
         try {
             MgnlContext.setInstance(systemContext);
-            partition(getNodes(eventSet, REMOVE_EVENT_PREDICATE), definition.getBatchSize()).forEach(this::remove);
-            partition(getNodes(eventSet, REMOVE_EVENT_PREDICATE.negate()), definition.getBatchSize()).forEach(this::index);
+            final Set<Event> filteredEvents = getFilteredEvents(eventSet);
+            partition(getNodes(filteredEvents, REMOVE_NODE_EVENT_PREDICATE), definition.getBatchSize()).forEach(this::remove);
+            partition(getNodes(filteredEvents, REMOVE_NODE_EVENT_PREDICATE.negate()), definition.getBatchSize()).forEach(this::index);
         } finally {
             systemContext.release();
         }
+    }
+
+    private Set<Event> getFilteredEvents(final Map<String, Set<Event>> events) {
+        return events.values().stream()
+                .flatMap(values -> {
+                    final boolean nodeAdded = values.stream().anyMatch(ADD_NODE_EVENT_PREDICATE);
+                    final boolean nodeRemoved = values.stream().anyMatch(REMOVE_NODE_EVENT_PREDICATE);
+                    if(nodeAdded && nodeRemoved) {
+                        return Stream.empty();
+                    }
+                    if(nodeRemoved) {
+                         return values.stream().filter(REMOVE_NODE_EVENT_PREDICATE);
+                    }
+                    return values.stream();
+                })
+                .collect(Collectors.toSet());
     }
 
     private void index(final Collection<Indexer.IndexNode> indexNodes) {
@@ -69,28 +93,40 @@ public class DataListener implements EventListener {
             LOG.debug("Indexing nodes {}...", indexNodes);
             final Session session = systemContext.getJCRSession(config.workspace());
             final Set<Node> nodes = indexNodes.stream()
-                    .map(indexNode -> Exceptions.wrap().get(() -> session.getNodeByIdentifier(indexNode.identifier())))
+                    .flatMap(indexNode -> getNode(session, indexNode).stream())
                     .filter(node -> new AnyNodeTypesPredicate(config.nodeTypes()).evaluateTyped(node))
                     .collect(Collectors.toSet());
-            indexer.index(nodes, config.type());
+            if(!nodes.isEmpty()) {
+                indexer.index(nodes, config.type());
+            }
         } catch (Exception e) {
             LOG.error("Failed to index nodes " + indexNodes, e);
+        }
+    }
+
+    private Optional<Node> getNode(final Session session, final Indexer.IndexNode indexNode) {
+        try {
+            return Optional.of(session.getNodeByIdentifier(indexNode.identifier()));
+        } catch (RepositoryException e) {
+            LOG.warn("Failed to get node " + indexNode + " workspace " + config.workspace());
+            return Optional.empty();
         }
     }
 
     private void remove(final Collection<Indexer.IndexNode> indexNodes) {
         try {
             LOG.debug("Removing nodes {}...", indexNodes);
-            indexer.remove(indexNodes, config.type());
+            if(!indexNodes.isEmpty()) {
+                indexer.remove(indexNodes, config.type());
+            }
         } catch (Exception e) {
             LOG.error("Failed to remove nodes " + indexNodes, e);
         }
     }
 
-    private Stream<Indexer.IndexNode> getNodes(final Set<Event> eventSet, final Predicate<Event> filter) {
+    private Stream<Indexer.IndexNode> getNodes(final Collection<Event> eventSet, final Predicate<Event> filter) {
         return eventSet.stream()
                 .filter(filter)
-                .filter(event -> Exceptions.wrap().get(event::getIdentifier) != null)
                 .filter(event -> Exceptions.wrap().get(event::getPath) != null)
                 .map(event -> Exceptions.wrap().get(() ->
                         new Indexer.IndexNode(event.getIdentifier(), event.getPath())
