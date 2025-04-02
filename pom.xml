@@ -6,7 +6,7 @@
 
   <groupId>com.merkle.oss.magnolia</groupId>
   <artifactId>magnolia-content-indexer</artifactId>
-  <version>0.0.6</version>
+  <version>0.0.7-SNAPSHOT</version>
 
   <name>${project.artifactId}</name>
   <description>The content indexer module makes can be used to populate search indexes</description>
