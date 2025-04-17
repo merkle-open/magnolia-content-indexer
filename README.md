@@ -13,7 +13,7 @@ The content indexer module makes can be used to populate search indexes.
 <dependency>
     <groupId>com.merkle.oss.magnolia</groupId>
     <artifactId>magnolia-content-indexer</artifactId>
-    <version>0.0.6</version>
+    <version>0.0.7</version>
 </dependency>
 ```
 
