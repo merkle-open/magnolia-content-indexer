@@ -5,8 +5,10 @@ import info.magnolia.jcr.util.NodeUtil;
 import info.magnolia.objectfactory.ComponentProvider;
 
 import java.lang.invoke.MethodHandles;
+import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Spliterator;
 import java.util.Spliterators;
@@ -44,14 +46,20 @@ public class IndexerTrigger {
 	}
 
 	public void index(final String indexerName, final String type, final String path, final boolean includeChildren) {
+		index(indexerName, Collections.emptyMap(), type, path, includeChildren);
+	}
+	public void index(final String indexerName, final Map<String, Object> params, final String type, final String path, final boolean includeChildren) {
 		final IndexerDefinition definition = indexerDefinitionRegistry.getProvider(indexerName).get();
 		final LoggingIndexerWrapper indexer = new LoggingIndexerWrapper(componentProvider.getComponent(definition.getClazz()));
 		LOG.info("Indexing {} under {} (includeChildren:{})...", definition.getName(), path, includeChildren);
-		partition(getNodes(definition, type, path, includeChildren), definition.getBatchSize()).forEach(nodes -> indexer.index(nodes, type));
+		partition(getNodes(definition, type, path, includeChildren), definition.getBatchSize()).forEach(nodes -> indexer.index(nodes, params, type));
 		LOG.info("Indexing {} under {} (includeChildren:{}) completed", definition.getName(), path, includeChildren);
 	}
 
 	public void remove(final String indexerName, final String type, final String path) {
+		remove(indexerName, Collections.emptyMap(), type, path);
+	}
+	public void remove(final String indexerName, final Map<String, Object> params, final String type, final String path) {
 		final IndexerDefinition definition = indexerDefinitionRegistry.getProvider(indexerName).get();
 		final LoggingIndexerWrapper indexer = new LoggingIndexerWrapper(componentProvider.getComponent(definition.getClazz()));
 		LOG.info("Removing {} under {}...", definition.getName(), path);
@@ -60,7 +68,7 @@ public class IndexerTrigger {
 						NodeUtil.getNodeIdentifierIfPossible(node),
 						NodeUtil.getNodePathIfPossible(node)
 				)
-		), definition.getBatchSize()).forEach(nodes -> indexer.remove(nodes, type));
+		), definition.getBatchSize()).forEach(nodes -> indexer.remove(nodes, params, type));
 		LOG.info("Removing {} under {} completed", definition.getName(), path);
 	}
 

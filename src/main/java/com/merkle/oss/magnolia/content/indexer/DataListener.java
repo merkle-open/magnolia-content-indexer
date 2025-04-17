@@ -5,6 +5,7 @@ import info.magnolia.context.SystemContext;
 
 import java.lang.invoke.MethodHandles;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -97,7 +98,7 @@ public class DataListener implements EventListener {
                     .filter(node -> new AnyNodeTypesPredicate(config.nodeTypes()).evaluateTyped(node))
                     .collect(Collectors.toSet());
             if(!nodes.isEmpty()) {
-                indexer.index(nodes, config.type());
+                indexer.index(nodes, Collections.emptyMap(), config.type());
             }
         } catch (Exception e) {
             LOG.error("Failed to index nodes " + indexNodes, e);
@@ -117,7 +118,7 @@ public class DataListener implements EventListener {
         try {
             LOG.debug("Removing nodes {}...", indexNodes);
             if(!indexNodes.isEmpty()) {
-                indexer.remove(indexNodes, config.type());
+                indexer.remove(indexNodes, Collections.emptyMap(), config.type());
             }
         } catch (Exception e) {
             LOG.error("Failed to remove nodes " + indexNodes, e);
