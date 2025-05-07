@@ -10,6 +10,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 import java.util.Spliterator;
 import java.util.Spliterators;
 import java.util.stream.Stream;
@@ -19,6 +20,7 @@ import javax.inject.Inject;
 import javax.inject.Provider;
 import javax.jcr.Node;
 
+import org.apache.jackrabbit.JcrConstants;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -30,7 +32,11 @@ import com.merkle.oss.magnolia.content.indexer.registry.IndexerDefinitionRegistr
 public class IndexerTrigger {
 	private static final Logger LOG = LoggerFactory.getLogger(MethodHandles.lookup().lookupClass());
 	private static final java.util.function.Predicate<Node> NOT_ROOT_NODE = node -> !Objects.equals(Exceptions.wrap().get(node::getPath), "/");
-    private final SystemContext systemContext;
+	public static final Set<String> SYSTEM_NODE_PATH_PREFIXES = Set.of("/"+JcrConstants.JCR_SYSTEM, "/rep:accesscontrol");
+	private static final java.util.function.Predicate<Node> FILTER = node -> SYSTEM_NODE_PATH_PREFIXES.stream().noneMatch(pathPrefix ->
+			Exceptions.wrap().get(node::getPath).startsWith(pathPrefix)
+	);
+	private final SystemContext systemContext;
     private final IndexerDefinitionRegistry indexerDefinitionRegistry;
     private final ComponentProvider componentProvider;
 
@@ -98,11 +104,13 @@ public class IndexerTrigger {
 	}
 
 	private Stream<Node> streamChildren(final Node node) {
+		@SuppressWarnings("unchecked")
 		final Provider<Iterator<Node>> iterator = () -> Exceptions.wrap().get(node::getNodes);
 		return Stream.concat(
 				Stream.of(node),
 				StreamSupport
 						.stream(Spliterators.spliteratorUnknownSize(iterator.get(), Spliterator.ORDERED),false)
+						.filter(FILTER)
 						.flatMap(this::streamChildren)
 		);
 	}
