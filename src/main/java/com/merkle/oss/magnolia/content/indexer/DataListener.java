@@ -35,7 +35,9 @@ import java.util.stream.StreamSupport;
 public class DataListener implements EventListener {
     private static final Logger LOG = LoggerFactory.getLogger(MethodHandles.lookup().lookupClass());
 
+    private static final Predicate<Event> ADD_NODE_EVENT_PREDICATE = event -> event.getType() == Event.NODE_ADDED;
     private static final Predicate<Event> REMOVE_NODE_EVENT_PREDICATE = event -> event.getType() == Event.NODE_REMOVED;
+    private static final Predicate<Event> MOVE_NODE_EVENT_PREDICATE = event -> event.getType() == Event.NODE_MOVED;
     private static final Predicate<Event> REMOVE_OR_MOVE_NODE_EVENT_PREDICATE = event ->
             event.getType() == Event.NODE_REMOVED || event.getType() == Event.NODE_MOVED;
 
@@ -82,7 +84,30 @@ public class DataListener implements EventListener {
     private Set<Event> getFilteredEvents(final Map<String, List<Event>> events) {
         return events.values().stream()
                 .filter(CollectionUtils::isNotEmpty)
-                .map(list -> list.get(list.size() - 1))
+                .map(values -> {
+                    final long nodesAdded = values.stream().filter(ADD_NODE_EVENT_PREDICATE).count();
+                    final long nodesRemoved = values.stream().filter(REMOVE_NODE_EVENT_PREDICATE).count();
+                    final long nodesMoved = values.stream().filter(MOVE_NODE_EVENT_PREDICATE).count();
+
+                    // Optional move actions followed by a delete action -> remove event
+                    if (nodesRemoved > nodesAdded) {
+                        return values.stream().filter(REMOVE_NODE_EVENT_PREDICATE).findFirst();
+                    }
+
+                    // At least one move action (not followed by a delete action) -> move event
+                    if (nodesMoved > 0 && nodesRemoved <= nodesMoved) {
+                        return values.stream().filter(MOVE_NODE_EVENT_PREDICATE).reduce((first, second) -> second);
+                    }
+
+                    // Add action, optionally followed by move actions, ending with a delete action -> ignore
+                    if (nodesRemoved > 0 && nodesRemoved == nodesAdded) {
+                        return Optional.<Event>empty();
+                    }
+
+                    // Add or edit action -> add or change event
+                    return values.stream().filter(REMOVE_NODE_EVENT_PREDICATE.negate()).reduce((first, second) -> second);
+                })
+                .flatMap(Optional::stream)
                 .collect(Collectors.toSet());
     }
 
