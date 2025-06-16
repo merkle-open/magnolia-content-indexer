@@ -25,17 +25,20 @@ public class DataListenerRegistrar {
     private final IndexerDefinitionRegistry indexerDefinitionRegistry;
     private final SystemContext systemContext;
     private final ComponentProvider componentProvider;
+    private final EventFilter eventFilter;
     private final Set<WorkspaceEventListenerRegistration.Handle> registrations = new HashSet<>();
 
     @Inject
     public DataListenerRegistrar(
             final IndexerDefinitionRegistry indexerDefinitionRegistry,
             final SystemContext systemContext,
-            final ComponentProvider componentProvider
+            final ComponentProvider componentProvider,
+            final EventFilter eventFilter
     ) {
         this.indexerDefinitionRegistry = indexerDefinitionRegistry;
         this.systemContext = systemContext;
         this.componentProvider = componentProvider;
+        this.eventFilter = eventFilter;
     }
 
     public void register() {
@@ -50,7 +53,7 @@ public class DataListenerRegistrar {
     }
 
     private void register(final Indexer indexer, final IndexerDefinition definition, final Config config) throws RepositoryException {
-        final DataListener eventListener = new DataListener(systemContext, indexer, definition, config);
+        final DataListener eventListener = new DataListener(systemContext, indexer, definition, config, eventFilter);
         registrations.add(
                 WorkspaceEventListenerRegistration
                         .observe(config.workspace(), config.rootNodePath(), new FilteredEventListener(eventListener, FILTER))
