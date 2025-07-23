@@ -19,5 +19,6 @@ public @interface IndexerFactory {
         String workspace();
         String rootNode() default "/";
         String[] nodeTypes() default {};
+        Class<? extends NodePredicate> predicate() default NodePredicate.class;
     }
 }

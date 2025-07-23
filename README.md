@@ -58,14 +58,17 @@ public class GuiceComponentConfigurer extends AbstractGuiceComponentConfigurer {
 ## Example
 
 ```java
+import com.machinezoo.noexception.Exceptions;
 import com.merkle.oss.magnolia.content.indexer.Indexer;
 import com.merkle.oss.magnolia.content.indexer.annotation.IndexerFactory;
+import com.merkle.oss.magnolia.content.indexer.annotation.NodePredicate;
 
 import info.magnolia.dam.jcr.DamConstants;
 import info.magnolia.jcr.util.NodeTypes;
 import info.magnolia.repository.RepositoryConstants;
 
 import java.util.Collection;
+import java.util.Objects;
 
 import javax.jcr.Node;
 
@@ -74,6 +77,7 @@ import javax.jcr.Node;
         name = SomeIndexer.NAME,
         configs = {
                 @IndexerFactory.Config(type = "page", workspace = RepositoryConstants.WEBSITE, nodeTypes = { NodeTypes.Page.NAME }),
+                @IndexerFactory.Config(type = "specificPage", workspace = RepositoryConstants.WEBSITE, nodeTypes = { NodeTypes.Page.NAME }, predicate = SomeIndexer.SomePredicate.class),
                 @IndexerFactory.Config(type = "asset", workspace = DamConstants.WORKSPACE, nodeTypes = { "mgnl:asset" })
         }
 )
@@ -86,7 +90,7 @@ public class SomeIndexer implements Indexer {
          * TODO add to index
          *  Gets triggered on node changes according to configs
          *  make sure to add node identifier to index to be able to remove it (see remove interface)
-         * 
+         *
          *  NOTE: runs in system context not in web context!
          */
     }
@@ -99,6 +103,14 @@ public class SomeIndexer implements Indexer {
          *
          *  NOTE: runs in system context not in web context!
          */
+    }
+
+    public static class SomePredicate implements NodePredicate {
+        @Override
+        public boolean test(final Node node) {
+            //TODO filter
+            return true;
+        }
     }
 }
 ```

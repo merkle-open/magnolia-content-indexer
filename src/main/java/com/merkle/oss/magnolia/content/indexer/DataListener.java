@@ -71,7 +71,7 @@ public class DataListener implements EventListener {
             final Session session = systemContext.getJCRSession(config.workspace());
             final Set<Node> nodes = indexNodes.stream()
                     .flatMap(indexNode -> getNode(session, indexNode).stream())
-                    .filter(node -> new AnyNodeTypesPredicate(config.nodeTypes()).evaluateTyped(node))
+                    .filter(config.predicate())
                     .collect(Collectors.toSet());
             if (!nodes.isEmpty()) {
                 indexer.index(nodes, Collections.emptyMap(), config.type());

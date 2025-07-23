@@ -80,7 +80,7 @@ public class IndexerTrigger {
 
 	private Stream<Node> getNodes(final IndexerDefinition definition, final String type, final String path, final boolean includeChildren) {
 		return streamConfigs(definition, type).flatMap(config ->
-				streamNodes(config, path, includeChildren).filter(NOT_ROOT_NODE.and(new AnyNodeTypesPredicate(config.nodeTypes())::evaluateTyped))
+				streamNodes(config, path, includeChildren).filter(NOT_ROOT_NODE.and(config.predicate()))
 		);
 	}
 

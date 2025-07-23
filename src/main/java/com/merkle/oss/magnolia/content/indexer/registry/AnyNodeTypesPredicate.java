@@ -1,4 +1,4 @@
-package com.merkle.oss.magnolia.content.indexer;
+package com.merkle.oss.magnolia.content.indexer.registry;
 
 import info.magnolia.jcr.predicate.AbstractPredicate;
 import info.magnolia.jcr.predicate.NodeTypePredicate;
