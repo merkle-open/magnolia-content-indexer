@@ -9,8 +9,8 @@ import info.magnolia.observation.WorkspaceEventListenerRegistration;
 import java.util.HashSet;
 import java.util.Set;
 
-import javax.inject.Inject;
-import javax.inject.Singleton;
+import jakarta.inject.Inject;
+import jakarta.inject.Singleton;
 import javax.jcr.RepositoryException;
 
 import org.apache.jackrabbit.commons.predicate.Predicate;

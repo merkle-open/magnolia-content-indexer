@@ -16,8 +16,6 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 
-import javax.jcr.Node;
-
 import com.merkle.oss.magnolia.builder.AbstractDynamicDefinitionProvider;
 import com.merkle.oss.magnolia.builder.DynamicDefinitionMetaData;
 import com.merkle.oss.magnolia.content.indexer.Config;
