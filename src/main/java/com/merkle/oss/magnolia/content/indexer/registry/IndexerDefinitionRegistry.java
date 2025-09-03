@@ -4,8 +4,8 @@ import info.magnolia.config.registry.AbstractRegistry;
 import info.magnolia.config.registry.DefinitionType;
 import info.magnolia.module.ModuleRegistry;
 
-import javax.inject.Inject;
-import javax.inject.Singleton;
+import jakarta.inject.Inject;
+import jakarta.inject.Singleton;
 
 import com.merkle.oss.magnolia.content.indexer.Indexer;
 
