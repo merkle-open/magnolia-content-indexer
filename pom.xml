@@ -6,7 +6,7 @@
 
   <groupId>com.merkle.oss.magnolia</groupId>
   <artifactId>magnolia-content-indexer</artifactId>
-  <version>0.0.12-SNAPSHOT</version>
+  <version>0.1.0-SNAPSHOT</version>
 
   <name>${project.artifactId}</name>
   <description>The content indexer module makes can be used to populate search indexes</description>
@@ -37,20 +37,19 @@
 
   <properties>
     <!--	mvn versions:display-property-updates	-->
-    <magnolia.version>6.3.8</magnolia.version>
-    <jsr305.nullable.version>3.0.2</jsr305.nullable.version>
-    <merkle.oss.dynamicbuilder.version>1.6.3</merkle.oss.dynamicbuilder.version>
+    <magnolia.version>6.4.0</magnolia.version>
+    <merkle.oss.dynamicbuilder.version>1.7.0</merkle.oss.dynamicbuilder.version>
     <!--Test dependency versions-->
-    <junit.version>5.12.2</junit.version>
-    <mockito.version>5.18.0</mockito.version>
+    <junit.version>6.0.1</junit.version>
+    <mockito.version>5.20.0</mockito.version>
 
     <!-- Maven Plugins -->
-    <mvn.compiler.plugin.version>3.14.0</mvn.compiler.plugin.version>
+    <mvn.compiler.plugin.version>3.14.1</mvn.compiler.plugin.version>
     <mvn.source.plugin.version>3.3.1</mvn.source.plugin.version>
-    <mvn.javadoc.version>3.11.2</mvn.javadoc.version>
+    <mvn.javadoc.version>3.12.0</mvn.javadoc.version>
     <mvn.gpg.plugin.version>3.2.5</mvn.gpg.plugin.version>
     <mvn.sonatype.publishing.plugin.version>0.5.0</mvn.sonatype.publishing.plugin.version>
-    <mvn.surefire.plugin.version>3.5.3</mvn.surefire.plugin.version>
+    <mvn.surefire.plugin.version>3.5.4</mvn.surefire.plugin.version>
 
     <javaVersion>17</javaVersion>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
@@ -66,11 +65,6 @@
         <version>${magnolia.version}</version>
         <type>pom</type>
         <scope>import</scope>
-      </dependency>
-      <dependency>
-        <groupId>com.google.code.findbugs</groupId>
-        <artifactId>jsr305</artifactId>
-        <version>${jsr305.nullable.version}</version>
       </dependency>
       <dependency>
         <groupId>com.merkle.oss.magnolia</groupId>
@@ -113,10 +107,6 @@
     </dependency>
 
     <dependency>
-      <groupId>com.google.code.findbugs</groupId>
-      <artifactId>jsr305</artifactId>
-    </dependency>
-    <dependency>
       <groupId>org.junit.jupiter</groupId>
       <artifactId>junit-jupiter</artifactId>
       <scope>test</scope>
@@ -138,8 +128,9 @@
       <scope>test</scope>
     </dependency>
     <dependency>
-      <groupId>info.magnolia</groupId>
-      <artifactId>magnolia-core</artifactId>
+      <groupId>org.apache.httpcomponents.client5</groupId>
+      <artifactId>httpclient5</artifactId>
+      <version>5.4.4</version>
     </dependency>
   </dependencies>
 
@@ -150,8 +141,7 @@
         <artifactId>maven-compiler-plugin</artifactId>
         <version>${mvn.compiler.plugin.version}</version>
         <configuration>
-          <source>${javaVersion}</source>
-          <target>${javaVersion}</target>
+          <release>17</release>
         </configuration>
       </plugin>
       <plugin>
