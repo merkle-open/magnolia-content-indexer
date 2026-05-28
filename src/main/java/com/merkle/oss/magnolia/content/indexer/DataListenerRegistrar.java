@@ -10,6 +10,7 @@ import java.util.HashSet;
 import java.util.Set;
 
 import jakarta.inject.Inject;
+import jakarta.inject.Provider;
 import jakarta.inject.Singleton;
 import javax.jcr.RepositoryException;
 
@@ -26,6 +27,7 @@ public class DataListenerRegistrar {
     private final SystemContext systemContext;
     private final ComponentProvider componentProvider;
     private final EventFilter eventFilter;
+    private final Provider<ContentIndexerModule> contentIndexerModule;
     private final Set<WorkspaceEventListenerRegistration.Handle> registrations = new HashSet<>();
 
     @Inject
@@ -33,12 +35,14 @@ public class DataListenerRegistrar {
             final IndexerDefinitionRegistry indexerDefinitionRegistry,
             final SystemContext systemContext,
             final ComponentProvider componentProvider,
-            final EventFilter eventFilter
+            final EventFilter eventFilter,
+            final Provider<ContentIndexerModule> contentIndexerModule
     ) {
         this.indexerDefinitionRegistry = indexerDefinitionRegistry;
         this.systemContext = systemContext;
         this.componentProvider = componentProvider;
         this.eventFilter = eventFilter;
+        this.contentIndexerModule = contentIndexerModule;
     }
 
     public void register() {
@@ -53,7 +57,7 @@ public class DataListenerRegistrar {
     }
 
     private void register(final Indexer indexer, final IndexerDefinition definition, final Config config) throws RepositoryException {
-        final DataListener eventListener = new DataListener(systemContext, indexer, definition, config, eventFilter);
+        final DataListener eventListener = new DataListener(systemContext, indexer, definition, config, eventFilter, contentIndexerModule);
         registrations.add(
                 WorkspaceEventListenerRegistration
                         .observe(config.workspace(), config.rootNodePath(), new FilteredEventListener(eventListener, FILTER))

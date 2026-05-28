@@ -30,6 +30,8 @@ import com.google.common.collect.Iterables;
 import com.machinezoo.noexception.Exceptions;
 import com.merkle.oss.magnolia.content.indexer.registry.IndexerDefinition;
 
+import jakarta.inject.Provider;
+
 public class DataListener implements EventListener {
     private static final Logger LOG = LoggerFactory.getLogger(MethodHandles.lookup().lookupClass());
 
@@ -38,30 +40,35 @@ public class DataListener implements EventListener {
     private final IndexerDefinition definition;
     private final Config config;
     private final EventFilter eventFilter;
+    private final Provider<ContentIndexerModule> contentIndexerModule;
 
     public DataListener(
             final SystemContext systemContext,
             final Indexer indexer,
             final IndexerDefinition definition,
             final Config config,
-            final EventFilter eventFilter
+            final EventFilter eventFilter,
+            final Provider<ContentIndexerModule> contentIndexerModule
     ) {
         this.systemContext = systemContext;
         this.indexer = new LoggingIndexerWrapper(indexer);
         this.definition = definition;
         this.config = config;
         this.eventFilter = eventFilter;
+        this.contentIndexerModule = contentIndexerModule;
     }
 
     @Override
     public void onEvent(final EventIterator events) {
-        try {
-            MgnlContext.setInstance(systemContext);
-            final Set<Event> filteredEvents = eventFilter.getFilteredEvents(events);
-            partition(getNodes(filteredEvents, EventFilter.REMOVE_OR_MOVE_NODE_EVENT_PREDICATE), definition.getBatchSize()).forEach(this::remove);
-            partition(getNodes(filteredEvents, EventFilter.REMOVE_NODE_EVENT_PREDICATE.negate()), definition.getBatchSize()).forEach(this::index);
-        } finally {
-            systemContext.release();
+        if(!contentIndexerModule.get().isEventListenerDisabled()) {
+            try {
+                MgnlContext.setInstance(systemContext);
+                final Set<Event> filteredEvents = eventFilter.getFilteredEvents(events);
+                partition(getNodes(filteredEvents, EventFilter.REMOVE_OR_MOVE_NODE_EVENT_PREDICATE), definition.getBatchSize()).forEach(this::remove);
+                partition(getNodes(filteredEvents, EventFilter.REMOVE_NODE_EVENT_PREDICATE.negate()), definition.getBatchSize()).forEach(this::index);
+            } finally {
+                systemContext.release();
+            }
         }
     }
 

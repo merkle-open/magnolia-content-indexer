@@ -18,6 +18,7 @@ public class ContentIndexerModule implements ModuleLifecycle {
     private final IndexerDefinitionRegistry indexerDefinitionRegistry;
     private final IndexerDefinitionConfigurationSource indexerDefinitionConfigurationSource;
     private final DataListenerRegistrar dataListenerRegistrar;
+    private boolean eventListenerDisabled;
 
     @Inject
 	public ContentIndexerModule(
@@ -43,4 +44,12 @@ public class ContentIndexerModule implements ModuleLifecycle {
 		LOG.debug("Stopping content indexer module");
 		dataListenerRegistrar.unregister();
 	}
+
+	public boolean isEventListenerDisabled() {
+		return eventListenerDisabled;
+	}
+
+	public void setEventListenerDisabled(final boolean eventListenerDisabled) {
+        this.eventListenerDisabled = eventListenerDisabled;
+    }
 }
