@@ -37,10 +37,10 @@
 
   <properties>
     <!--	mvn versions:display-property-updates	-->
-    <magnolia.version>6.4.6</magnolia.version>
-    <merkle.oss.dynamicbuilder.version>1.7.13</merkle.oss.dynamicbuilder.version>
+    <magnolia.version>6.4.7</magnolia.version>
+    <merkle.oss.dynamicbuilder.version>1.7.15</merkle.oss.dynamicbuilder.version>
     <!--Test dependency versions-->
-    <junit.version>6.1.0</junit.version>
+    <junit.version>6.1.1</junit.version>
     <mockito.version>5.23.0</mockito.version>
 
     <!-- Maven Plugins -->
