@@ -64,7 +64,8 @@ public class DataListener implements EventListener {
             try {
                 MgnlContext.setInstance(systemContext);
                 final Set<Event> filteredEvents = eventFilter.getFilteredEvents(events);
-                partition(getNodes(filteredEvents, EventFilter.REMOVE_OR_MOVE_NODE_EVENT_PREDICATE), definition.getBatchSize()).forEach(this::remove);
+                partition(getNodes(filteredEvents, EventFilter.REMOVE_NODE_EVENT_PREDICATE), definition.getBatchSize()).forEach(this::remove);
+                partition(getNodes(filteredEvents, EventFilter.MOVE_NODE_EVENT_PREDICATE), definition.getBatchSize()).forEach(this::move);
                 partition(getNodes(filteredEvents, EventFilter.REMOVE_NODE_EVENT_PREDICATE.negate()), definition.getBatchSize()).forEach(this::index);
             } finally {
                 systemContext.release();
@@ -88,12 +89,18 @@ public class DataListener implements EventListener {
         }
     }
 
-    private Optional<Node> getNode(final Session session, final Indexer.IndexNode indexNode) {
+    private void move(final Collection<Indexer.IndexNode> indexNodes) {
         try {
-            return Optional.of(session.getNodeByIdentifier(indexNode.identifier()));
-        } catch (RepositoryException e) {
-            LOG.warn("Failed to get node {} workspace {}", indexNode, config.workspace());
-            return Optional.empty();
+            LOG.debug("Moving nodes {}...", indexNodes);
+            final Session session = systemContext.getJCRSession(config.workspace());
+            final Set<Indexer.IndexNode> filteredIndexNodes = indexNodes.stream()
+                    .filter(indexNode -> getNode(session, indexNode).map(config.predicate()::test).orElse(false))
+                    .collect(Collectors.toSet());
+            if (!filteredIndexNodes.isEmpty()) {
+                indexer.remove(filteredIndexNodes, Collections.emptyMap(), config.type());
+            }
+        } catch (Exception e) {
+            LOG.error("Failed to move nodes {}", indexNodes, e);
         }
     }
 
@@ -105,6 +112,15 @@ public class DataListener implements EventListener {
             }
         } catch (Exception e) {
             LOG.error("Failed to remove nodes {}", indexNodes, e);
+        }
+    }
+
+    private Optional<Node> getNode(final Session session, final Indexer.IndexNode indexNode) {
+        try {
+            return Optional.of(session.getNodeByIdentifier(indexNode.identifier()));
+        } catch (RepositoryException e) {
+            LOG.warn("Failed to get node {} workspace {}", indexNode, config.workspace());
+            return Optional.empty();
         }
     }
 
