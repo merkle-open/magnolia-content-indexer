@@ -4,8 +4,6 @@ import java.lang.invoke.MethodHandles;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
-import java.util.Optional;
 import java.util.Set;
 import java.util.Spliterator;
 import java.util.Spliterators;
@@ -27,9 +25,10 @@ public class EventFilter {
     private static final Logger LOG = LoggerFactory.getLogger(MethodHandles.lookup().lookupClass());
 
     static final Predicate<Event> ADD_NODE_EVENT_PREDICATE = event -> event.getType() == Event.NODE_ADDED;
+    static final Predicate<Event> EDIT_NODE_EVENT_PREDICATE = event -> Set.of(Event.PROPERTY_CHANGED, Event.PROPERTY_ADDED, Event.PROPERTY_REMOVED).contains(event.getType());
     static final Predicate<Event> REMOVE_NODE_EVENT_PREDICATE = event -> event.getType() == Event.NODE_REMOVED;
-    static final Predicate<Event> MOVE_NODE_EVENT_PREDICATE = event -> event.getType() == Event.NODE_MOVED;
-    static final Predicate<Event> REMOVE_OR_MOVE_NODE_EVENT_PREDICATE = EventFilter.REMOVE_NODE_EVENT_PREDICATE.or(EventFilter.MOVE_NODE_EVENT_PREDICATE);
+    static final Predicate<Event> MOVE_NODE_EVENT_PREDICATE = event -> event.getType() == Event.NODE_MOVED && Exceptions.wrap().get(() -> event.getInfo().containsKey("srcAbsPath"));
+    static final Predicate<Event> REORDER_NODE_EVENT_PREDICATE = event -> event.getType() == Event.NODE_MOVED && Exceptions.wrap().get(() -> event.getInfo().containsKey("srcChildRelPath"));
 
     public Set<Event> getFilteredEvents(final EventIterator events) {
         final Map<String, List<Event>> eventSet = StreamSupport
@@ -63,8 +62,8 @@ public class EventFilter {
                         return Stream.empty();
                     }
 
-                    // Add or edit action -> add or change event
-                    return values.stream().filter(REMOVE_OR_MOVE_NODE_EVENT_PREDICATE.negate());
+                    // Add,edit or reorder action -> add or change event
+                    return values.stream().filter(ADD_NODE_EVENT_PREDICATE.or(EDIT_NODE_EVENT_PREDICATE).or(REORDER_NODE_EVENT_PREDICATE));
                 })
                 .collect(Collectors.toSet());
     }

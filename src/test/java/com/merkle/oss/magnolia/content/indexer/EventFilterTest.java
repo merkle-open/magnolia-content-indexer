@@ -5,6 +5,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import info.magnolia.test.mock.jcr.MockEvent;
 import info.magnolia.test.mock.jcr.MockEventIterator;
 
+import java.util.Map;
 import java.util.Set;
 
 import javax.jcr.observation.Event;
@@ -159,6 +160,18 @@ class EventFilterTest {
         );
     }
 
+    @Test
+    void reorder() {
+        assertEquals(
+                Set.of(
+                        new ReorderNodeEvent("1")
+                ),
+                eventFilter.getFilteredEvents(new MockEventIterator(
+                        new ReorderNodeEvent("1")
+                ))
+        );
+    }
+
     public static class AddNodeEvent extends AbstractNodeEvent {
         public AddNodeEvent(final String identifier) {
             super(Event.NODE_ADDED, identifier);
@@ -172,6 +185,25 @@ class EventFilterTest {
     public static class MoveNodeEvent extends AbstractNodeEvent {
         public MoveNodeEvent(final String identifier) {
             super(Event.NODE_MOVED, identifier);
+        }
+        @Override
+        public Map<String, String> getInfo() {
+            return Map.of(
+                    "srcAbsPath", "/some/path",
+                    "destAbsPath", "/some/other/path"
+            );
+        }
+    }
+    public static class ReorderNodeEvent extends AbstractNodeEvent {
+        public ReorderNodeEvent(final String identifier) {
+            super(Event.NODE_MOVED, identifier);
+        }
+        @Override
+        public Map<String, String> getInfo() {
+            return Map.of(
+                    "srcChildRelPath", "relPath",
+                    "destChildRelPath", "relPath2"
+            );
         }
     }
     public static class ChangePropertyEvent extends AbstractNodeEvent {
@@ -200,11 +232,13 @@ class EventFilterTest {
             return result;
         }
 
+
         @Override
         public String toString() {
             return "Event{" +
                     "id='" + getIdentifier() + '\'' +
                     ", type='" + getType() + '\'' +
+                    ", info='" + getInfo() + '\'' +
                     '}';
         }
     }

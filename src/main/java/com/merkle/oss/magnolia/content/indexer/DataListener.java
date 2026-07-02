@@ -66,7 +66,7 @@ public class DataListener implements EventListener {
                 final Set<Event> filteredEvents = eventFilter.getFilteredEvents(events);
                 partition(getNodes(filteredEvents, EventFilter.REMOVE_NODE_EVENT_PREDICATE), definition.getBatchSize()).forEach(this::remove);
                 partition(getNodes(filteredEvents, EventFilter.MOVE_NODE_EVENT_PREDICATE), definition.getBatchSize()).forEach(this::move);
-                partition(getNodes(filteredEvents, EventFilter.REMOVE_NODE_EVENT_PREDICATE.negate()), definition.getBatchSize()).forEach(this::index);
+                partition(getNodes(filteredEvents, EventFilter.ADD_NODE_EVENT_PREDICATE.or(EventFilter.EDIT_NODE_EVENT_PREDICATE)), definition.getBatchSize()).forEach(this::index);
             } finally {
                 systemContext.release();
             }
@@ -93,11 +93,14 @@ public class DataListener implements EventListener {
         try {
             LOG.debug("Moving nodes {}...", indexNodes);
             final Session session = systemContext.getJCRSession(config.workspace());
-            final Set<Indexer.IndexNode> filteredIndexNodes = indexNodes.stream()
-                    .filter(indexNode -> getNode(session, indexNode).map(config.predicate()::test).orElse(false))
+            final Set<Node> nodes = indexNodes.stream()
+                    .flatMap(indexNode -> getNode(session, indexNode).stream())
+                    .filter(config.predicate())
                     .collect(Collectors.toSet());
-            if (!filteredIndexNodes.isEmpty()) {
+            if (!nodes.isEmpty()) {
+                final Set<Indexer.IndexNode> filteredIndexNodes = nodes.stream().map(n -> Exceptions.wrap().get(() -> new Indexer.IndexNode(n.getIdentifier(), n.getPath()))).collect(Collectors.toSet());
                 indexer.remove(filteredIndexNodes, Collections.emptyMap(), config.type());
+                indexer.index(nodes, Collections.emptyMap(), config.type());
             }
         } catch (Exception e) {
             LOG.error("Failed to move nodes {}", indexNodes, e);
