@@ -12,6 +12,7 @@ public @interface IndexerFactory {
     String name();
     int batchSize() default Integer.MAX_VALUE;
     Config[] configs();
+    Class<? extends EventPredicate> filter() default EventPredicate.SystemExcludingPredicates.class;
 
     @interface Config {
         String type();
@@ -19,6 +20,7 @@ public @interface IndexerFactory {
         String workspace();
         String rootNode() default "/";
         String[] nodeTypes() default {};
+        Class<? extends EventPredicate> filter() default EventPredicate.class;
         Class<? extends NodePredicate> predicate() default NodePredicate.class;
     }
 }

@@ -14,12 +14,17 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
+import java.util.function.Predicate;
 import java.util.stream.Collectors;
+
+import javax.jcr.Node;
+import javax.jcr.observation.Event;
 
 import com.merkle.oss.magnolia.builder.AbstractDynamicDefinitionProvider;
 import com.merkle.oss.magnolia.builder.DynamicDefinitionMetaData;
 import com.merkle.oss.magnolia.content.indexer.Config;
 import com.merkle.oss.magnolia.content.indexer.Indexer;
+import com.merkle.oss.magnolia.content.indexer.annotation.EventPredicate;
 import com.merkle.oss.magnolia.content.indexer.annotation.IndexerFactory;
 import com.merkle.oss.magnolia.content.indexer.annotation.NodePredicate;
 
@@ -50,30 +55,42 @@ public class IndexerDefinitionProvider extends AbstractDynamicDefinitionProvider
 
     @Override
     public IndexerDefinition getInternal() throws Registry.InvalidDefinitionException {
+        final Predicate<Event> filter = createEventPredicate(annotation.filter()).orElseGet(() -> ignored -> true);
         return new IndexerDefinition(
                 annotation.name(),
                 factoryClass,
                 annotation.batchSize(),
+                new ExceptionHandlingPredicate<>(filter,false),
                 Arrays.stream(annotation.configs()).map(this::create).collect(Collectors.toSet())
         );
     }
 
     private Config create(final IndexerFactory.Config annotation) {
-        final NodePredicate nodePredicate = Optional.of(annotation.predicate())
-                .filter(not(NodePredicate.class::equals))
-                .map(predicateClass -> (NodePredicate)componentProvider.newInstance(predicateClass))
-                .orElseGet(() -> ignored -> true);
-
+        final Predicate<Node> nodePredicate = createNodePredicate(annotation.predicate());
         return new Config(
                 annotation.type(),
                 Duration.ofMillis(annotation.delayInMs()),
                 annotation.workspace(),
                 annotation.rootNode(),
+                createEventPredicate(annotation.filter()).map(filter -> new ExceptionHandlingPredicate<>(filter, false)).orElse(null),
                 new ExceptionHandlingPredicate<>(
                         nodePredicate.and(new AnyNodeTypesPredicate(Set.of(annotation.nodeTypes()))::evaluateTyped),
                         false
                 )
         );
+    }
+
+    private Optional<EventPredicate> createEventPredicate(final Class<? extends EventPredicate> predicate) {
+        return Optional.of(predicate)
+                .filter(not(EventPredicate.class::equals))
+                .map(predicateClass -> (EventPredicate)componentProvider.newInstance(predicateClass));
+    }
+
+    private NodePredicate createNodePredicate(final Class<? extends NodePredicate> predicate) {
+        return Optional.of(predicate)
+                .filter(not(NodePredicate.class::equals))
+                .map(predicateClass -> (NodePredicate)componentProvider.newInstance(predicateClass))
+                .orElseGet(() -> ignored -> true);
     }
 
     private static class IndexerDefinitionMetaDataBuilder extends DynamicDefinitionMetaData.Builder {

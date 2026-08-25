@@ -3,26 +3,27 @@ package com.merkle.oss.magnolia.content.indexer;
 
 import info.magnolia.cms.util.FilteredEventListener;
 import info.magnolia.context.SystemContext;
+import info.magnolia.jcr.predicate.AbstractPredicate;
 import info.magnolia.objectfactory.ComponentProvider;
 import info.magnolia.observation.WorkspaceEventListenerRegistration;
 
 import java.util.HashSet;
+import java.util.Optional;
 import java.util.Set;
 
-import jakarta.inject.Inject;
-import jakarta.inject.Provider;
-import jakarta.inject.Singleton;
 import javax.jcr.RepositoryException;
-
-import org.apache.jackrabbit.commons.predicate.Predicate;
+import javax.jcr.observation.Event;
 
 import com.machinezoo.noexception.Exceptions;
 import com.merkle.oss.magnolia.content.indexer.registry.IndexerDefinition;
 import com.merkle.oss.magnolia.content.indexer.registry.IndexerDefinitionRegistry;
 
+import jakarta.inject.Inject;
+import jakarta.inject.Provider;
+import jakarta.inject.Singleton;
+
 @Singleton
 public class DataListenerRegistrar {
-    private static final Predicate FILTER = FilteredEventListener.JCR_SYSTEM_EXCLUDING_PREDICATE;
     private final IndexerDefinitionRegistry indexerDefinitionRegistry;
     private final SystemContext systemContext;
     private final ComponentProvider componentProvider;
@@ -60,7 +61,12 @@ public class DataListenerRegistrar {
         final DataListener eventListener = new DataListener(systemContext, indexer, definition, config, eventFilter, contentIndexerModule);
         registrations.add(
                 WorkspaceEventListenerRegistration
-                        .observe(config.workspace(), config.rootNodePath(), new FilteredEventListener(eventListener, FILTER))
+                        .observe(config.workspace(), config.rootNodePath(), new FilteredEventListener(eventListener, new AbstractPredicate<Event>() {
+                            @Override
+                            public boolean evaluateTyped(final Event event) {
+                                return Optional.ofNullable(config.filter()).orElseGet(definition::getFilter).test(event);
+                            }
+                        }))
                         .withDelay(config.delay().toMillis())
                         .register()
         );

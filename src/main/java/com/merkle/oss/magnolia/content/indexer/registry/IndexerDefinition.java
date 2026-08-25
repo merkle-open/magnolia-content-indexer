@@ -4,6 +4,9 @@ import info.magnolia.config.NamedDefinition;
 
 import java.util.Objects;
 import java.util.Set;
+import java.util.function.Predicate;
+
+import javax.jcr.observation.Event;
 
 import com.merkle.oss.magnolia.content.indexer.Config;
 import com.merkle.oss.magnolia.content.indexer.Indexer;
@@ -12,17 +15,20 @@ public class IndexerDefinition implements NamedDefinition {
 	private final String name;
 	private final Class<? extends Indexer> clazz;
     private final int batchSize;
+    private final Predicate<Event> filter;
     private final Set<Config> configs;
 
 	public IndexerDefinition(
 			final String name,
 			final Class<? extends Indexer> clazz,
 			final int batchSize,
+			final Predicate<Event> filter,
 			final Set<Config> configs
 	) {
 		this.name = name;
 		this.clazz = clazz;
         this.batchSize = batchSize;
+        this.filter = filter;
         this.configs = configs;
     }
 
@@ -43,18 +49,21 @@ public class IndexerDefinition implements NamedDefinition {
 		return configs;
 	}
 
+	public Predicate<Event> getFilter() {
+		return filter;
+	}
+
 	@Override
 	public boolean equals(Object o) {
-		if (o == null || getClass() != o.getClass()) {
+		if (!(o instanceof IndexerDefinition that)) {
 			return false;
 		}
-		IndexerDefinition that = (IndexerDefinition) o;
-		return batchSize == that.batchSize && Objects.equals(name, that.name) && Objects.equals(clazz, that.clazz) && Objects.equals(configs, that.configs);
+        return batchSize == that.batchSize && Objects.equals(name, that.name) && Objects.equals(clazz, that.clazz) && Objects.equals(filter, that.filter) && Objects.equals(configs, that.configs);
 	}
 
 	@Override
 	public int hashCode() {
-		return Objects.hash(name, clazz, batchSize, configs);
+		return Objects.hash(name, clazz, batchSize, filter, configs);
 	}
 
 	@Override
@@ -63,6 +72,7 @@ public class IndexerDefinition implements NamedDefinition {
 				"name='" + name + '\'' +
 				", clazz=" + clazz +
 				", batchSize=" + batchSize +
+				", filter=" + filter +
 				", configs=" + configs +
 				'}';
 	}
